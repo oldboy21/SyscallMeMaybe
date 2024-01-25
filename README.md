@@ -19,4 +19,5 @@ Also few references to learn about malware development:
 1. [MaldevAcademy](https://maldevacademy.com)
 2. [Sektor7](https://institute.sektor7.net/)
 
+Do not do nasty stuff with this code please. 
 Chee(e)rs
