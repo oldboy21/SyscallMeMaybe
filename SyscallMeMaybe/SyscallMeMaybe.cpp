@@ -18,6 +18,7 @@ typedef unsigned __int64 QWORD, * PQWORD;
 //gloabl variables
 BYTE syscall_code[] = { 0x0f, 0x05, 0xc3 };
 std::unordered_map<std::string, ZW_ATTR> zwFunctions;
+//extern because they are used in the ASM code as well
 extern "C" DWORD SSN = 0;
 extern "C" QWORD SYSCALLADDR = 0;
 
